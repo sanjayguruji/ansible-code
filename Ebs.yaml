@@ -1,0 +1,25 @@
+---            
+- name: create ebs vol
+  hosts: localhost
+  vars:        
+      aws_region: us-east-1
+      availability_zone: us-east-1b
+      vol_result_volume_id: data-vol
+  tasks:       
+          - name: create a 5Gb gp3 volume
+            amazon.aws.ec2_vol:
+              region: "{{ aws_region }}"
+              zone: "{{ availability_zone }}"
+              volume_size: 5
+              volume_type: gp3
+              encrypted: true
+              tags:
+                Environment: prod
+                Team: platform
+                ManageBy: Ansible
+              state: present                                                                                                                                   
+            register: vol_result
+               
+          - name: display volume details
+            ansible.builtin.debug:
+              msg: "Created volume {{ vol_result_volume_id }} in {{ availability_zone }}"
