@@ -1,0 +1,26 @@
+# create-io2-volume.yml - Create a high-performance io2 volume for databases
+---
+- name: Create High Performance EBS Volume
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Create a 200GB io2 volume with provisioned IOPS
+      amazon.aws.ec2_vol:
+        region: us-east-1
+        zone: us-east-1b
+        volume_size: 200
+        volume_type: io2
+        iops: 10000
+        name: "postgres-data-vol"
+        encrypted: true
+        tags:
+          Service: postgres
+          Environment: production
+        state: present
+      register: db_volume
+
+    - name: Show volume info
+      ansible.builtin.debug:
+        var: db_volume
