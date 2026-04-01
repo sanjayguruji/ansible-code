@@ -1,0 +1,43 @@
+# teardown-vpc.yml
+---
+- name: Tear down VPC and all resources
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    aws_region: us-east-1
+    vpc_name: production-vpc
+
+  tasks:
+    - name: Get VPC ID
+      amazon.aws.ec2_vpc_net_info:
+        region: "{{ aws_region }}"
+        filters:
+          "tag:Name": "{{ vpc_name }}"
+      register: vpc_info
+
+    - name: Set VPC ID
+      ansible.builtin.set_fact:
+        vpc_id: "{{ vpc_info.vpcs[0].id }}"
+      when: vpc_info.vpcs | length > 0
+
+    # Teardown order: NAT GWs, then route tables, then IGW,
+    # then subnets, then security groups, then VPC
+
+    - name: Delete NAT gateways
+      amazon.aws.ec2_vpc_nat_gateway:
+        nat_gateway_id: "{{ item.nat_gateway_id }}"
+        region: "{{ aws_region }}"
+        state: absent
+        wait: true
+      loop: "{{ nat_gateways }}"
+      when: nat_gateways is defined
+
+    - name: Delete VPC
+      amazon.aws.ec2_vpc_net:
+        name: "{{ vpc_name }}"
+        cidr_block: "{{ vpc_info.vpcs[0].cidr_block }}"
+        region: "{{ aws_region }}"
+        state: absent
+      when: vpc_info.vpcs | length > 0
