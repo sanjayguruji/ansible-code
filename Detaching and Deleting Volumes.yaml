@@ -1,0 +1,26 @@
+# cleanup-volumes.yml - Detach and delete EBS volumes
+---
+- name: Cleanup EBS Volumes
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    volumes_to_remove:
+      - vol-0abc123def456789a
+      - vol-0def456abc789012b
+
+  tasks:
+    - name: Detach and delete volumes
+      amazon.aws.ec2_vol:
+        region: us-east-1
+        id: "{{ item }}"
+        state: absent
+      loop: "{{ volumes_to_remove }}"
+      register: delete_results
+
+    - name: Confirm deletion
+      ansible.builtin.debug:
+        msg: "Deleted volume {{ item.item }}"
+      loop: "{{ delete_results.results }}"
+      when: item is changed
