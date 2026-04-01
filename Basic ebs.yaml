@@ -1,0 +1,29 @@
+# create-ebs-volume.yml - Create a basic gp3 EBS volume
+---
+- name: Create an EBS Volume
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    aws_region: us-east-1
+    availability_zone: us-east-1b
+
+  tasks:
+    - name: Create a 10GB gp3 volume
+      amazon.aws.ec2_vol:
+        region: "{{ aws_region }}"
+        zone: "{{ availability_zone }}"
+        volume_size: 10
+        volume_type: gp3
+        name: "data-volume-01"
+        tags:
+          Environment: production
+          Team: platform
+          ManagedBy: ansible
+        state: present
+      register: vol_result
+
+    - name: Display volume details
+      ansible.builtin.debug:
+        msg: "Created volume {{ vol_result.volume_id }} in {{ availability_zone }}"
