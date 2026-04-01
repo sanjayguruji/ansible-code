@@ -1,0 +1,30 @@
+# create-and-attach.yml - Create a volume and attach it to an EC2 instance
+---
+- name: Create and Attach EBS Volume
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    instance_id: "i-0abc123def456789"
+    aws_region: us-east-1
+
+  tasks:
+    - name: Create and attach a 10GB volume
+      amazon.aws.ec2_vol:
+        region: "{{ aws_region }}"
+        instance: "{{ instance_id }}"
+        volume_size: 10
+        volume_type: gp3
+        device_name: /dev/xvdf
+        name: "devops-data-{{ instance_id }}"
+        encrypted: true
+        tags:
+          Purpose: devops-data
+          AttachedTo: "{{ instance_id }}"
+        state: present
+      register: attached_vol
+
+    - name: Print attachment details
+      ansible.builtin.debug:
+        msg: "Volume {{ attached_vol.volume_id }} attached as {{ attached_vol.device }}"
