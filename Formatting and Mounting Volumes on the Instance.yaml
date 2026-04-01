@@ -1,0 +1,41 @@
+# format-and-mount.yml - Format and mount an attached EBS volume
+---
+- name: Format and Mount EBS Volume
+  hosts: web_servers
+  become: true
+
+  vars:
+    data_device: /dev/nvme1n1
+    mount_point: /data
+
+  tasks:
+    - name: Create a filesystem on the volume
+      community.general.filesystem:
+        fstype: ext4
+        dev: "{{ data_device }}"
+        opts: "-L appdata"
+
+    - name: Create the mount point directory
+      ansible.builtin.file:
+        path: "{{ mount_point }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Mount the volume
+      ansible.posix.mount:
+        path: "{{ mount_point }}"
+        src: "{{ data_device }}"
+        fstype: ext4
+        opts: defaults,nofail
+        state: mounted
+
+    - name: Verify the mount
+      ansible.builtin.command: df -h {{ mount_point }}
+      register: df_output
+      changed_when: false
+
+    - name: Show mount status
+      ansible.builtin.debug:
+        var: df_output.stdout_lines
