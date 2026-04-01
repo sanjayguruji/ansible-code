@@ -1,0 +1,50 @@
+# multi-volume-setup.yml - Create multiple volumes with different specs
+---
+- name: Multi-Volume Setup
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    instance_id: "i-0abc123def456789"
+    aws_region: us-east-1
+    volumes:
+      - name: "os-logs"
+        size: 50
+        type: gp3
+        device: /dev/xvdf
+        purpose: "Operating system logs"
+      - name: "app-data"
+        size: 200
+        type: gp3
+        device: /dev/xvdg
+        purpose: "Application data"
+      - name: "db-storage"
+        size: 500
+        type: io2
+        device: /dev/xvdh
+        iops: 5000
+        purpose: "Database storage"
+
+  tasks:
+    - name: Create and attach each volume
+      amazon.aws.ec2_vol:
+        region: "{{ aws_region }}"
+        instance: "{{ instance_id }}"
+        volume_size: "{{ item.size }}"
+        volume_type: "{{ item.type }}"
+        iops: "{{ item.iops | default(omit) }}"
+        device_name: "{{ item.device }}"
+        name: "{{ item.name }}-{{ instance_id }}"
+        encrypted: true
+        tags:
+          Purpose: "{{ item.purpose }}"
+          ManagedBy: ansible
+        state: present
+      loop: "{{ volumes }}"
+      register: vol_results
+
+    - name: Summarize all volumes
+      ansible.builtin.debug:
+        msg: "{{ item.item.name }}: {{ item.volume_id }} ({{ item.item.size }}GB {{ item.item.type }})"
+      loop: "{{ vol_results.results }}"
